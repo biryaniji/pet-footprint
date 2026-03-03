@@ -7,7 +7,6 @@ import { UploadButton } from "@/components/upload-button"
 import { MusicPlayer } from "@/components/music-player"
 import { PetGallery } from "@/components/pet-gallery"
 import type { Pet } from "@/components/pet-gallery"
-import { supabase } from "@/lib/supabase"
 
 export default function Home() {
   const [pets, setPets] = useState<Pet[]>([])
@@ -15,15 +14,10 @@ export default function Home() {
 
   useEffect(() => {
     async function fetchPets() {
-      const { data, error } = await supabase
-        .from("pets")
-        .select("*")
-        .order("created_at", { ascending: true })
-
-      if (error) {
-        console.error("Error fetching pets:", error)
-      } else if (data) {
-        setPets(data.map((p) => ({ name: p.name, src: p.image_url })))
+      const res = await fetch("/api/pets")
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setPets(data.map((p: any) => ({ name: p.name, src: p.image_url })))
       }
       setLoading(false)
     }
@@ -35,32 +29,24 @@ export default function Home() {
 
     for (const file of Array.from(files)) {
       const fileName = `${Date.now()}-${file.name}`
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("fileName", fileName)
 
-      const { error: uploadError } = await supabase.storage
-        .from("pet-images")
-        .upload(fileName, file)
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+      const uploadData = await uploadRes.json()
+      if (!uploadData.url) continue
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError)
-        continue
-      }
+      await fetch("/api/pets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: petName, image_url: uploadData.url }),
+      })
 
-      const { data: urlData } = supabase.storage
-        .from("pet-images")
-        .getPublicUrl(fileName)
-
-      const imageUrl = urlData.publicUrl
-
-      const { error: dbError } = await supabase
-        .from("pets")
-        .insert({ name: petName, image_url: imageUrl })
-
-      if (dbError) {
-        console.error("DB error:", dbError)
-        continue
-      }
-
-      newPets.push({ name: petName, src: imageUrl })
+      newPets.push({ name: petName, src: uploadData.url })
     }
 
     setPets((prev) => [...prev, ...newPets])
