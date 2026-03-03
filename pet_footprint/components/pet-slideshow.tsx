@@ -21,6 +21,15 @@ export function PetSlideshow({ pets }: PetSlideshowProps) {
     }, 800)
   }, [pets.length])
 
+  const prevSlide = useCallback(() => {
+    if (pets.length <= 1) return
+    setIsTransitioning(true)
+    setTimeout(() => {
+      setCurrentIndex((prev) => (prev - 1 + pets.length) % pets.length)
+      setIsTransitioning(false)
+    }, 800)
+  }, [pets.length])
+
   useEffect(() => {
     if (pets.length <= 1) return
     const interval = setInterval(nextSlide, 4000)
@@ -92,6 +101,28 @@ export function PetSlideshow({ pets }: PetSlideshowProps) {
               />
             </div>
           ))}
+
+          {/* Prev arrow */}
+          {pets.length > 1 && (
+            <button
+              onClick={prevSlide}
+              className="absolute left-2 top-1/2 z-20 -translate-y-1/2 border border-border bg-background/80 px-2 py-1 font-serif text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-200 text-sm"
+              aria-label="Previous pet"
+            >
+              {"◀"}
+            </button>
+          )}
+
+          {/* Next arrow */}
+          {pets.length > 1 && (
+            <button
+              onClick={nextSlide}
+              className="absolute right-2 top-1/2 z-20 -translate-y-1/2 border border-border bg-background/80 px-2 py-1 font-serif text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-200 text-sm"
+              aria-label="Next pet"
+            >
+              {"▶"}
+            </button>
+          )}
 
           {/* Pet name overlay */}
           <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-background/80 to-transparent px-3 pb-2 pt-6">
